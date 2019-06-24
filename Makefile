@@ -1,7 +1,7 @@
 ARDUINO_DIR  = /usr/share/arduino
 
 TARGET       = main
-ARDUINO_LIBS = SPI
+ARDUINO_LIBS =
 BOARD_TAG    = nano
 #ISP_PROG     = avrispmkii
 

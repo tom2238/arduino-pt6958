@@ -42,6 +42,7 @@
 #define PT6958_LED_7			(0x27|0x00)
 #define PT6958_LED_8			(0x7F|0x00)
 #define PT6958_LED_9			(0x6F|0x00)
+#define PT6958_LED_UNDERSCORE	(0x08|0x00)
 // Leds status
 #define PT6958_LED_OFF			0
 #define PT6958_LED_ON			1
@@ -64,6 +65,28 @@ enum Dimming {
   PT6958_DQS_13,
   PT6958_DQS_14
 };
+// Lookup table
+typedef struct {
+    unsigned char znak; 					//znak oryginal
+    unsigned char kod; 			//kod znaku
+} pt6958_char_table_t;
+
+static const pt6958_char_table_t pt6958_char_table_data[]={
+    // cyfry
+    { '0', PT6958_LED_0, },
+    { '1', PT6958_LED_1, },
+    { '2', PT6958_LED_2, },
+    { '3', PT6958_LED_3, },
+    { '4', PT6958_LED_4, },
+    { '5', PT6958_LED_5, },
+    { '6', PT6958_LED_6, },
+    { '7', PT6958_LED_7, },
+    { '8', PT6958_LED_8, },
+    { '9', PT6958_LED_9, },
+};
+#define PT6958_TABLE_LEN 		(sizeof(pt6958_char_table_data)/sizeof(pt6958_char_table_t))
+#define PT6958_MAX_CHARS		4
+
 // Functions
 void SendDataRaw(bool b7, bool b6, bool b5, bool b4, bool b3, bool b2, bool b1, bool b0);
 void SendDataRawDec(byte number);
@@ -73,6 +96,7 @@ void DisplayControlCommand(byte dimming, byte show);
 void WriteToAddress(byte address, byte data);
 void DisplayClear();
 void DisplaySet();
+static unsigned char pt6958_translate_lookup(char in);
 
 void setup() {
   Serial.begin(9600);
@@ -188,22 +212,28 @@ int msg_read(){
 void loop() {
 
   WriteToAddress(PT6958_CMD_ADDR_DISP1, PT6958_LED_0);
-  WriteToAddress(PT6958_CMD_ADDR_DISP2, PT6958_LED_3);
-  WriteToAddress(PT6958_CMD_ADDR_DISP3, PT6958_LED_5);
-  WriteToAddress(PT6958_CMD_ADDR_DISP4, PT6958_LED_1);
+  WriteToAddress(PT6958_CMD_ADDR_DISP2, PT6958_LED_0);
+  WriteToAddress(PT6958_CMD_ADDR_DISP3, PT6958_LED_0);
+  WriteToAddress(PT6958_CMD_ADDR_DISP4, PT6958_LED_0);
 
   WriteToAddress(PT6958_CMD_ADDR_LED1,PT6958_LED_RED);
   WriteToAddress(PT6958_CMD_ADDR_LED2,PT6958_LED_GREEN);
   WriteToAddress(PT6958_CMD_ADDR_LED3,PT6958_LED_ORANGE);
 
-
- // for(;;);
-
-  //digitalWrite(PT6958_PORT_STB, LOW);
-  //msg(1,0,0,0,1,1,1,1); //command 3
-  //msgDec(0x8F);
-  //digitalWrite(PT6958_PORT_STB, HIGH);
-
+  int i,j,k,l;
+  for(i=0;i<10;i++) {
+    WriteToAddress(PT6958_CMD_ADDR_DISP1, pt6958_translate_lookup(i+0x30));
+    for(j=0;j<10;j++) {
+      WriteToAddress(PT6958_CMD_ADDR_DISP2, pt6958_translate_lookup(j+0x30));
+      for(k=0;k<10;k++) {
+        WriteToAddress(PT6958_CMD_ADDR_DISP3, pt6958_translate_lookup(k+0x30));
+        for(l=0;l<10;l++) {
+          WriteToAddress(PT6958_CMD_ADDR_DISP4, pt6958_translate_lookup(l+0x30));
+          delay(99);
+        }
+      }
+    }
+  }
 
   /*digitalWrite(stb, LOW);
   msg(0,1,0,0,0,0,1,0); //command 1 // read
@@ -214,7 +244,7 @@ void loop() {
   //msg(1,0,0,0,1,1,1,1); //command 3
   //digitalWrite(stb, HIGH);
 
-  delay(400);
+  //delay(400);
 }
 
 void SendDataRawDec(byte number) {
@@ -273,4 +303,17 @@ void DisplaySet() {
   for(i=0;i<PT6958_RAM_SIZE;i++) {
     WriteToAddress(i,0xFF);
   }
+}
+
+static unsigned char pt6958_translate_lookup(char in){
+   int i;
+   unsigned char out;
+   pt6958_char_table_t *table = (pt6958_char_table_t *)pt6958_char_table_data;
+
+   for(i=0; i<PT6958_TABLE_LEN; i++)   {
+      if(table->znak == in) { out = table->kod; break; }
+      table++;
+   }
+   if(i==PT6958_TABLE_LEN) out = PT6958_LED_UNDERSCORE; //nieznany znak wyswietl jako _
+   return out;
 }
