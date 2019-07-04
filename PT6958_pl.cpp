@@ -65,12 +65,17 @@ enum Dimming {
   PT6958_DQS_13,
   PT6958_DQS_14
 };
+// Key groups
+typedef struct {
+  unsigned char group1;
+  unsigned char group2;
+  unsigned char group3;
+} pt6958_key_group_t;
 // Lookup table
 typedef struct {
-    unsigned char znak; 					//znak oryginal
-    unsigned char kod; 			//kod znaku
+  unsigned char znak; 	// original
+  unsigned char kod; 	// code
 } pt6958_char_table_t;
-
 static const pt6958_char_table_t pt6958_char_table_data[]={
     // cyfry
     { '0', PT6958_LED_0, },
@@ -96,7 +101,12 @@ void DisplayControlCommand(byte dimming, byte show);
 void WriteToAddress(byte address, byte data);
 void DisplayClear();
 void DisplaySet();
+void PrintDisplayNumber(unsigned short number);
+unsigned char ReadDataRaw();
+pt6958_key_group_t ReadKeyGroups();
 static unsigned char pt6958_translate_lookup(char in);
+unsigned int setDelay = 1;
+int counter = 0;
 
 void setup() {
   Serial.begin(9600);
@@ -113,6 +123,74 @@ void setup() {
   DisplayControlCommand(PT6958_DQS_14,PT6958_DISPLAY_ON);
   delay(450);
   DisplayClear();
+  WriteToAddress(PT6958_CMD_ADDR_LED1,PT6958_LED_RED);
+  WriteToAddress(PT6958_CMD_ADDR_LED2,PT6958_LED_GREEN);
+  WriteToAddress(PT6958_CMD_ADDR_LED3,PT6958_LED_ORANGE);
+}
+
+// the loop routine runs over and over again forever:
+void loop() {
+
+  /*WriteToAddress(PT6958_CMD_ADDR_DISP1, PT6958_LED_0);
+  WriteToAddress(PT6958_CMD_ADDR_DISP2, PT6958_LED_0);
+  WriteToAddress(PT6958_CMD_ADDR_DISP3, PT6958_LED_0);
+  WriteToAddress(PT6958_CMD_ADDR_DISP4, PT6958_LED_0);*/
+
+ /* int i,j,k,l;
+  for(i=0;i<10;i++) {
+    WriteToAddress(PT6958_CMD_ADDR_DISP1, pt6958_translate_lookup(i+0x30));
+    for(j=0;j<10;j++) {
+      WriteToAddress(PT6958_CMD_ADDR_DISP2, pt6958_translate_lookup(j+0x30));
+      for(k=0;k<10;k++) {
+        WriteToAddress(PT6958_CMD_ADDR_DISP3, pt6958_translate_lookup(k+0x30));
+        for(l=0;l<10;l++) {
+          WriteToAddress(PT6958_CMD_ADDR_DISP4, pt6958_translate_lookup(l+0x30));
+          delay(100);
+        }
+      }
+    }
+  }*/
+  if(counter>9999) {counter=0;}
+  PrintDisplayNumber(counter);
+  delay(setDelay);
+
+  pt6958_key_group_t g1 = ReadKeyGroups();
+  if(g1.group1 == 0x10 && g1.group2 == 0x00 && g1.group3 == 0x00){
+    setDelay++;
+    if(setDelay > 100) {setDelay = 100;}
+  }
+  else if(g1.group1 == 0x00 && g1.group2 == 0x01 && g1.group3 == 0x00){
+    setDelay--;
+    if(setDelay < 1) {setDelay = 1;}
+  }
+  /*Serial.print("D:");
+  Serial.print(g1.group1, HEX);
+  Serial.print(":");
+  Serial.print(g1.group2, HEX);
+  Serial.print(":");
+  Serial.println(g1.group3, HEX);
+
+
+  delay(100);*/
+  counter++;
+}
+
+void PrintDisplayNumber(unsigned short number) {
+  if(number > 9999) {
+    WriteToAddress(PT6958_CMD_ADDR_DISP1, PT6958_LED_9);
+    WriteToAddress(PT6958_CMD_ADDR_DISP2, PT6958_LED_9);
+    WriteToAddress(PT6958_CMD_ADDR_DISP3, PT6958_LED_9);
+    WriteToAddress(PT6958_CMD_ADDR_DISP4, PT6958_LED_9);
+  } else {
+    byte seg4 = (number % 10);
+    byte seg3 = (number / 10) % 10;
+    byte seg2 = (number / 100) % 10;
+    byte seg1 = (number / 1000) % 10;
+    WriteToAddress(PT6958_CMD_ADDR_DISP1, pt6958_translate_lookup(seg1+0x30));
+    WriteToAddress(PT6958_CMD_ADDR_DISP2, pt6958_translate_lookup(seg2+0x30));
+    WriteToAddress(PT6958_CMD_ADDR_DISP3, pt6958_translate_lookup(seg3+0x30));
+    WriteToAddress(PT6958_CMD_ADDR_DISP4, pt6958_translate_lookup(seg4+0x30));
+  }
 }
 
 void SendDataRaw(bool b7, bool b6, bool b5, bool b4, bool b3, bool b2, bool b1, bool b0){
@@ -142,109 +220,33 @@ void SendDataRaw(bool b7, bool b6, bool b5, bool b4, bool b3, bool b2, bool b1, 
   digitalWrite(PT6958_PORT_CLK, HIGH);
 }
 
-int msg_read(){
-
-  digitalWrite(PT6958_PORT_CLK, HIGH);
-  delay(1);
-  digitalWrite(PT6958_PORT_CLK, LOW);
-  Serial.print(digitalRead(PT6958_PORT_DIN));
-  Serial.print(",");
-  digitalWrite(PT6958_PORT_CLK, HIGH);
-
-
-  digitalWrite(PT6958_PORT_CLK, LOW);
-  Serial.print(digitalRead(PT6958_PORT_DIN));
-  Serial.print(",");
-  digitalWrite(PT6958_PORT_CLK, HIGH);
-
-  digitalWrite(PT6958_PORT_CLK, LOW);
-  Serial.print(digitalRead(PT6958_PORT_DIN));
-  Serial.print(",");
-  digitalWrite(PT6958_PORT_CLK, HIGH);
-
-  digitalWrite(PT6958_PORT_CLK, LOW);
-  Serial.print(digitalRead(PT6958_PORT_DIN));
-  Serial.print(",");
-  digitalWrite(PT6958_PORT_CLK, HIGH);
-
-  digitalWrite(PT6958_PORT_CLK, LOW);
-  Serial.print(digitalRead(PT6958_PORT_DIN));
-  Serial.print(",");
-  digitalWrite(PT6958_PORT_CLK, HIGH);
-
-  digitalWrite(PT6958_PORT_CLK, LOW);
-  Serial.print(digitalRead(PT6958_PORT_DIN));
-  Serial.print(",");
-  digitalWrite(PT6958_PORT_CLK, HIGH);
-
-
-  digitalWrite(PT6958_PORT_CLK, LOW);
-  Serial.print(digitalRead(PT6958_PORT_DIN));
-  Serial.print(",");
-  digitalWrite(PT6958_PORT_CLK, HIGH);
-
-  digitalWrite(PT6958_PORT_CLK, LOW);
-  Serial.println(digitalRead(PT6958_PORT_DIN));
-  digitalWrite(PT6958_PORT_CLK, HIGH);
-
-  //delay(100);
-
-  return 1;
-}
-// Forum elektroda.pl
-/*int msg_read(){
-  pinMode(dg, INPUT);
-
-   for (char i=0; i<12; i++){
-    digitalWrite(clk, LOW);
-    digitalWrite(clk, HIGH);
-    Serial.print(digitalRead(dg));
-    Serial.print(",");
-  }
-  Serial.println();
-  pinMode(dg, OUTPUT);
-
-  return 1;
-}*/
-
-
-// the loop routine runs over and over again forever:
-void loop() {
-
-  WriteToAddress(PT6958_CMD_ADDR_DISP1, PT6958_LED_0);
-  WriteToAddress(PT6958_CMD_ADDR_DISP2, PT6958_LED_0);
-  WriteToAddress(PT6958_CMD_ADDR_DISP3, PT6958_LED_0);
-  WriteToAddress(PT6958_CMD_ADDR_DISP4, PT6958_LED_0);
-
-  WriteToAddress(PT6958_CMD_ADDR_LED1,PT6958_LED_RED);
-  WriteToAddress(PT6958_CMD_ADDR_LED2,PT6958_LED_GREEN);
-  WriteToAddress(PT6958_CMD_ADDR_LED3,PT6958_LED_ORANGE);
-
-  int i,j,k,l;
-  for(i=0;i<10;i++) {
-    WriteToAddress(PT6958_CMD_ADDR_DISP1, pt6958_translate_lookup(i+0x30));
-    for(j=0;j<10;j++) {
-      WriteToAddress(PT6958_CMD_ADDR_DISP2, pt6958_translate_lookup(j+0x30));
-      for(k=0;k<10;k++) {
-        WriteToAddress(PT6958_CMD_ADDR_DISP3, pt6958_translate_lookup(k+0x30));
-        for(l=0;l<10;l++) {
-          WriteToAddress(PT6958_CMD_ADDR_DISP4, pt6958_translate_lookup(l+0x30));
-          delay(99);
-        }
-      }
+unsigned char ReadDataRaw() {
+  int i;
+  unsigned char keycode = 0;
+  for(i=0; i<8; i++) {
+    digitalWrite(PT6958_PORT_CLK, LOW);
+    if(digitalRead(PT6958_PORT_DOUT)) {
+      keycode |= (1 << i);
     }
+    delayMicroseconds(1);
+    digitalWrite(PT6958_PORT_CLK, HIGH);
+    delayMicroseconds(1);
   }
+  return keycode;
+}
 
-  /*digitalWrite(stb, LOW);
-  msg(0,1,0,0,0,0,1,0); //command 1 // read
-  msg_read(); //data
-  digitalWrite(stb, HIGH);*/
-
- //digitalWrite(stb, LOW);
-  //msg(1,0,0,0,1,1,1,1); //command 3
-  //digitalWrite(stb, HIGH);
-
-  //delay(400);
+pt6958_key_group_t ReadKeyGroups() {
+  pt6958_key_group_t kgroup;
+  digitalWrite(PT6958_PORT_STB, LOW);
+  SendDataRawDec(0x42); // Data read, address increment, mode normal
+  pinMode(PT6958_PORT_DOUT, INPUT);
+  kgroup.group1 = ReadDataRaw();
+  kgroup.group2 = ReadDataRaw();
+  kgroup.group3 = ReadDataRaw();
+  digitalWrite(PT6958_PORT_STB, HIGH);
+  pinMode(PT6958_PORT_DOUT, OUTPUT);
+  DataSettingsCommand(PT6958_DATA_WRITE, PT6958_INC_FIXED, PT6958_MODE_NORMAL);
+  return kgroup;
 }
 
 void SendDataRawDec(byte number) {
@@ -269,7 +271,7 @@ void DataSettingsCommand(byte settings, byte increment, byte mode) {
 }
 
 void AddressSettingsCommand(byte address) {
-  byte output = 0xC0;
+  byte output = 0xC0;        // Zero address default
   if ((address >= 0x00) && (address < PT6958_RAM_SIZE)) {
     output = 0xC0 | address; // 4 bit address
   }
@@ -311,9 +313,11 @@ static unsigned char pt6958_translate_lookup(char in){
    pt6958_char_table_t *table = (pt6958_char_table_t *)pt6958_char_table_data;
 
    for(i=0; i<PT6958_TABLE_LEN; i++)   {
-      if(table->znak == in) { out = table->kod; break; }
+      if(table->znak == in) {
+        out = table->kod; break;
+      }
       table++;
    }
-   if(i==PT6958_TABLE_LEN) out = PT6958_LED_UNDERSCORE; //nieznany znak wyswietl jako _
+   if(i==PT6958_TABLE_LEN) out = PT6958_LED_UNDERSCORE; //otherwise _
    return out;
 }
