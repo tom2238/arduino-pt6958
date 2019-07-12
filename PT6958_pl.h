@@ -1,10 +1,6 @@
 #ifndef PT6958_PL_ARDUINO_H
 #define PT6958_PL_ARDUINO_H
 
-// Arduino ports
-#define PT6958_PORT_STB    10
-#define PT6958_PORT_CLK    13
-#define PT6958_PORT_DATA   11
 // Data
 #define PT6958_DATA_READ   0x2
 #define PT6958_DATA_WRITE  0x0
@@ -67,6 +63,19 @@ enum PT6958Dimming {
   PT6958_DQS_13,
   PT6958_DQS_14
 };
+// Pressed buttons
+enum PT6958PressButton {
+  PT6958_BUTTON_LEAVE,
+  PT6958_BUTTON_POWER,
+  PT6958_BUTTON_MENU,
+  PT6958_BUTTON_RADIO,
+  PT6958_BUTTON_LEFT,
+  PT6958_BUTTON_UP,
+  PT6958_BUTTON_OK,
+  PT6958_BUTTON_DOWN,
+  PT6958_BUTTON_RIGHT
+};
+
 // Key groups
 typedef struct {
   unsigned char group1;
@@ -95,6 +104,11 @@ static const PT6958CharTable_t PT6958CharTableData[]={
 #define PT6958_MAX_CHARS		4
 
 // Functions
+void PT6958Init(byte STB, byte CLK, byte DATA);
+void PT6958PrintDisplayNumber(unsigned short number);
+unsigned char PT6958ReadDataRaw();
+PT6958KeyGroup_t PT6958ReadKeyGroups();
+byte PT6958ButtonDetect();
 void PT6958SendDataRaw(byte number);
 void PT6958DataSettingsCommand(byte settings, byte increment, byte mode);
 void PT6958AddressSettingsCommand(byte address);
@@ -102,9 +116,6 @@ void PT6958DisplayControlCommand(byte dimming, byte show);
 void PT6958WriteToAddress(byte address, byte data);
 void PT6958DisplayClear();
 void PT6958DisplaySet();
-void PT6958PrintDisplayNumber(unsigned short number);
-unsigned char PT6958ReadDataRaw();
-PT6958KeyGroup_t PT6958ReadKeyGroups();
 unsigned char PT6958TranslateLookup(char in);
 
 #endif // PT6958_PL_ARDUINO_H
